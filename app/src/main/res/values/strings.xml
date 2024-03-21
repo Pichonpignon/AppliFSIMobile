@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">appli_FSI</string>
+    <string name="logo_description">Logo</string>
+    <string name="prenom_symbol">✏️</string>
+    <string name="nom_symbol">📜</string>
+    <string name="phone_symbol">\uD83D\uDCDE</string>
+    <string name="email_symbol">\uD83D\uDCE7</string>
+    <string name="societe_symbol">🏢</string>
+    <string name="tuteur_entreprise_symbol">👨‍💼</string>
+    <string name="tuteur_ecole_symbol">👨‍🏫</string>
+
+
+</resources>
