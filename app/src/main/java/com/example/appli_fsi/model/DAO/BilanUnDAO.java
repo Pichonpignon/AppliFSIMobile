@@ -3,7 +3,6 @@ package com.example.appli_fsi.model.DAO;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.example.appli_fsi.model.BO.BilanUn;
@@ -19,21 +18,21 @@ public class BilanUnDAO {
         dbHelper = new MySQLiteHelper(context);
     }
 
-    public void open() throws SQLException {
+    public void open() {
         database = dbHelper.getWritableDatabase();
     }
 
     public void close() {
-        dbHelper.close();
+        database.close();
     }
 
-    public BilanUn insertBilanUn(BilanUn bilanUn){
+    public BilanUn insertBilanUn(BilanUn bilanUn) {
         ContentValues values = new ContentValues();
-        values.put("noteEts", bilanUn.getNoteEts());
-        values.put("dateBilanUn", bilanUn.getDateBilanUn().getTime());
-        values.put("noteDossierUn", bilanUn.getNoteDossierUn());
-        values.put("noteOralUn", bilanUn.getNoteOralUn());
-        values.put("rqBilanUn", bilanUn.getRqBilanUn());
+        values.put(MySQLiteHelper.COLUMN_NOTE_ETS, bilanUn.getNoteEts());
+        values.put(MySQLiteHelper.COLUMN_DATE_BILAN_UN, bilanUn.getDateBilanUn().getTime());
+        values.put(MySQLiteHelper.COLUMN_NOTE_DOSSIER_UN, bilanUn.getNoteDossierUn());
+        values.put(MySQLiteHelper.COLUMN_NOTE_ORAL_UN, bilanUn.getNoteOralUn());
+        values.put(MySQLiteHelper.COLUMN_RQ_BILAN_UN, bilanUn.getRqBilanUn());
 
         long id = database.insert(MySQLiteHelper.TABLE_BILAN_UN, null, values);
         bilanUn.setIdBilanUn((int) id);
@@ -41,23 +40,22 @@ public class BilanUnDAO {
         return bilanUn;
     }
 
-    public ArrayList<BilanUn> getAllBilanUn(){
+    public ArrayList<BilanUn> getAllBilanUn() {
         ArrayList<BilanUn> listBilanUn = new ArrayList<>();
 
-        Cursor cursor = database.query(true, MySQLiteHelper.TABLE_BILAN_UN,
-                new String[]{"idBilanUn", "noteEts", "dateBilanUn", "noteDossierUn", "noteOralUn", "rqBilanUn"},
-                null, null, null, null, null, null);
+        String[] colonnes = {
+                MySQLiteHelper.COLUMN_ID_BILAN_UN,
+                MySQLiteHelper.COLUMN_NOTE_ETS,
+                MySQLiteHelper.COLUMN_DATE_BILAN_UN,
+                MySQLiteHelper.COLUMN_NOTE_DOSSIER_UN,
+                MySQLiteHelper.COLUMN_NOTE_ORAL_UN,
+                MySQLiteHelper.COLUMN_RQ_BILAN_UN
+        };
 
-        while (cursor.moveToNext()){
-            int idBilanUn = cursor.getInt(cursor.getColumnIndex("idBilanUn"));
-            float noteEts = cursor.getFloat(cursor.getColumnIndex("noteEts"));
-            long dateMillis = cursor.getLong(cursor.getColumnIndex("dateBilanUn"));
-            Date dateBilanUn = new Date(dateMillis);
-            float noteDossierUn = cursor.getFloat(cursor.getColumnIndex("noteDossierUn"));
-            float noteOralUn = cursor.getFloat(cursor.getColumnIndex("noteOralUn"));
-            String rqBilanUn = cursor.getString(cursor.getColumnIndex("rqBilanUn"));
+        Cursor cursor = database.query(MySQLiteHelper.TABLE_BILAN_UN, colonnes, null, null, null, null, null);
 
-            BilanUn bilanUn = new BilanUn(idBilanUn, noteEts, dateBilanUn, noteDossierUn, noteOralUn, rqBilanUn);
+        while (cursor.moveToNext()) {
+            BilanUn bilanUn = getBilanUnFromCursor(cursor);
             listBilanUn.add(bilanUn);
         }
 
@@ -65,31 +63,48 @@ public class BilanUnDAO {
         return listBilanUn;
     }
 
-    public BilanUn getBilanUnById(int id){
+    public BilanUn getBilanUnById(int id) {
         BilanUn bilanUn = null;
 
-        Cursor cursor = database.query(true, MySQLiteHelper.TABLE_BILAN_UN,
-                new String[]{"idBilanUn", "noteEts", "dateBilanUn", "noteDossierUn", "noteOralUn", "rqBilanUn"},
-                "idBilanUn = " + id, null, null, null, null, null);
+        String[] colonnes = {
+                MySQLiteHelper.COLUMN_ID_BILAN_UN,
+                MySQLiteHelper.COLUMN_NOTE_ETS,
+                MySQLiteHelper.COLUMN_DATE_BILAN_UN,
+                MySQLiteHelper.COLUMN_NOTE_DOSSIER_UN,
+                MySQLiteHelper.COLUMN_NOTE_ORAL_UN,
+                MySQLiteHelper.COLUMN_RQ_BILAN_UN
+        };
 
-        while (cursor.moveToNext()){
-            float noteEts = cursor.getFloat(cursor.getColumnIndex("noteEts"));
-            long dateMillis = cursor.getLong(cursor.getColumnIndex("dateBilanUn"));
-            Date dateBilanUn = new Date(dateMillis);
-            float noteDossierUn = cursor.getFloat(cursor.getColumnIndex("noteDossierUn"));
-            float noteOralUn = cursor.getFloat(cursor.getColumnIndex("noteOralUn"));
-            String rqBilanUn = cursor.getString(cursor.getColumnIndex("rqBilanUn"));
+        String selection = MySQLiteHelper.COLUMN_ID_BILAN_UN + " = ?";
+        String[] selectionArgs = {String.valueOf(id)};
 
-            bilanUn = new BilanUn(id, noteEts, dateBilanUn, noteDossierUn, noteOralUn, rqBilanUn);
+        Cursor cursor = database.query(MySQLiteHelper.TABLE_BILAN_UN, colonnes, selection, selectionArgs, null, null, null);
+
+        if (cursor.moveToNext()) {
+            bilanUn = getBilanUnFromCursor(cursor);
         }
 
         cursor.close();
         return bilanUn;
     }
 
-    public void deleteBilanUn(BilanUn bilanUn){
+    public void deleteBilanUn(BilanUn bilanUn) {
         int id = bilanUn.getIdBilanUn();
-        database.delete(MySQLiteHelper.TABLE_BILAN_UN, "idBilanUn = " + id, null);
+        String selection = MySQLiteHelper.COLUMN_ID_BILAN_UN + " = ?";
+        String[] selectionArgs = {String.valueOf(id)};
+        database.delete(MySQLiteHelper.TABLE_BILAN_UN, selection, selectionArgs);
+    }
+
+    private BilanUn getBilanUnFromCursor(Cursor cursor) {
+        int idBilanUn = cursor.getInt(cursor.getColumnIndex(MySQLiteHelper.COLUMN_ID_BILAN_UN));
+        float noteEts = cursor.getFloat(cursor.getColumnIndex(MySQLiteHelper.COLUMN_NOTE_ETS));
+        long dateMillis = cursor.getLong(cursor.getColumnIndex(MySQLiteHelper.COLUMN_DATE_BILAN_UN));
+        Date dateBilanUn = new Date(dateMillis);
+        float noteDossierUn = cursor.getFloat(cursor.getColumnIndex(MySQLiteHelper.COLUMN_NOTE_DOSSIER_UN));
+        float noteOralUn = cursor.getFloat(cursor.getColumnIndex(MySQLiteHelper.COLUMN_NOTE_ORAL_UN));
+        String rqBilanUn = cursor.getString(cursor.getColumnIndex(MySQLiteHelper.COLUMN_RQ_BILAN_UN));
+
+        return new BilanUn(idBilanUn, noteEts, dateBilanUn, noteDossierUn, noteOralUn, rqBilanUn);
     }
 }
 

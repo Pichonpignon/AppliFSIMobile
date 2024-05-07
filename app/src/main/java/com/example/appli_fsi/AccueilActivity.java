@@ -8,8 +8,8 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.appli_fsi.model.BO.Etudiant;
-import com.example.appli_fsi.model.DAO.EtudiantDAO;
-import com.example.appli_fsi.model.DAO.MySQLiteHelper;
+//import com.example.appli_fsi.model.DAO.EtudiantDAO;
+//import com.example.appli_fsi.model.DAO.MySQLiteHelper;
 
 public class AccueilActivity extends AppCompatActivity {
 

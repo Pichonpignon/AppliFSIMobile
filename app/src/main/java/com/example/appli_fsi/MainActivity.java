@@ -2,27 +2,26 @@ package com.example.appli_fsi;
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.content.Intent;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
-import java.util.Date;
-import java.util.Calendar;
 
+import com.example.appli_fsi.model.BO.APIService;
 import com.example.appli_fsi.model.BO.Etudiant;
-import com.example.appli_fsi.model.DAO.EtudiantDAO;
-import com.example.appli_fsi.model.DAO.MySQLiteHelper;
-import com.example.appli_fsi.model.BO.BilanUn;
-import com.example.appli_fsi.model.BO.BilanDeux;
+import com.example.appli_fsi.model.BO.RetrofitClient;
+
+import java.util.List;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity {
-    EditText editTextLogin, editTextMdp;
-    Button buttonLogin;
-    SQLiteDatabase db;
-
+    private EditText editTextLogin, editTextMdp;
+    private Button buttonLogin;
+    private Etudiant etudiant;
+    private RetrofitClient retrofitClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,57 +32,7 @@ public class MainActivity extends AppCompatActivity {
         editTextMdp = findViewById(R.id.editTextPassword);
         buttonLogin = findViewById(R.id.buttonLogin);
 
-        Etudiant etu = new Etudiant();
-        etu.setIdEtu(1);
-        etu.setNomEtu("Doe");
-        etu.setPreEtu("John");
-        etu.setTelEtu("0898798");
-        etu.setMailEtu("ghubefo");
-        etu.setEtsEtu("kubf");
-        etu.setTutEtsEtu("uviui");
-        etu.setTutEtu("iub");
-        etu.setMdpEtu("doe");
-        etu.setLoginEtu("john");
-
-        BilanUn bilanUn = new BilanUn();
-        bilanUn.setIdBilanUn(1);
-        bilanUn.setRqBilanUn("uyvieudviubvu");
-        bilanUn.setNoteEts(12);
-        bilanUn.setNoteOralUn(16);
-        bilanUn.setNoteDossierUn(11);
-
-        Calendar calendar = Calendar.getInstance();
-        calendar.set(Calendar.YEAR, 2024);
-        calendar.set(Calendar.MONTH, calendar.MAY);
-        calendar.set(Calendar.DAY_OF_MONTH, 15);
-        Date date = calendar.getTime();
-        bilanUn.setDateBilanUn(date);
-
-        BilanDeux bilanDeux = new BilanDeux();
-        bilanDeux.setIdBilanDeux(12);
-        bilanDeux.setNoteDossierDeux(12);
-        bilanDeux.setNoteOralDeux(13);
-        bilanDeux.setSujetMemoire("yufivuvb");
-        bilanDeux.setRqBilanDeux("iufiiuvbouboi");
-
-        Calendar calendar1 = Calendar.getInstance();
-        calendar1.set(Calendar.YEAR, 2024);
-        calendar1.set(Calendar.MONTH, calendar1.OCTOBER);
-        calendar1.set(Calendar.DAY_OF_MONTH, 16);
-        Date date1 = calendar1.getTime();
-        bilanDeux.setDateBilanDeux(date1);
-
-        etu.setMonBilanDeux(bilanDeux);
-        etu.setMonBilanUn(bilanUn);
-
-
-        /*EtudiantDAO etudiantDAO = new EtudiantDAO(this);
-        etudiantDAO.open();
-        etudiantDAO.insertEtu(etu);
-        etudiantDAO.close();
-
-        MySQLiteHelper dbHelper = new MySQLiteHelper(this);
-        db = dbHelper.getWritableDatabase();*/
+        retrofitClient = RetrofitClient.getInstance();
 
         buttonLogin.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -91,34 +40,35 @@ public class MainActivity extends AppCompatActivity {
                 String login = editTextLogin.getText().toString().trim();
                 String mdp = editTextMdp.getText().toString().trim();
 
-                if(etu.getLoginEtu().equals(login) && etu.getMdpEtu().equals(mdp)){
-                    Intent intent = new Intent(MainActivity.this, AccueilActivity.class);
-                    intent.putExtra("etudiant",etu);
-                    startActivity(intent);
-                    //finish();
-                }else  {
-                    Toast.makeText(MainActivity.this,"Login ou mot de passe incorrect", Toast.LENGTH_SHORT).show();
-                }
-
-               /* if(verifMdp(login,mdp)){
-                    Intent intent = new Intent(MainActivity.this, AccueilActivity.class);
-                    startActivity(intent);
-                    finish();
-                }else {
-                    Toast.makeText(MainActivity.this, "Login ou Mot de Passe incorrect", Toast.LENGTH_SHORT).show();
-                }*/
+                authenticateUser(login, mdp);
             }
         });
     }
 
-    private boolean verifMdp(String login, String mdp){
-        String[] colonne = {"loginEtu", "mdpEtu"};
-        String selection = "loginEtu=? AND mdpEtu=?";
-        String[] selctionArgs = {login, mdp};
+    private void authenticateUser(String login, String mdp) {
+        Call<Etudiant> call = retrofitClient.getMyApi().getEtudiant(login, mdp);
 
-        Cursor cursor = db.query(MySQLiteHelper.TABLE_ETUDIANT, colonne, selection, selctionArgs, null, null,null);
-        boolean valid = cursor.moveToFirst();
-        cursor.close();
-        return valid;
+        call.enqueue(new Callback<Etudiant>() {
+            @Override
+            public void onResponse(Call<Etudiant> call, Response<Etudiant> response) {
+                if (response.isSuccessful()) {
+                    etudiant = response.body();
+                    redirectToAccueil(etudiant);
+                } else {
+                    Toast.makeText(MainActivity.this, "Login ou mot de passe incorrect", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Etudiant> call, Throwable t) {
+                Toast.makeText(MainActivity.this, "Erreur de connexion", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void redirectToAccueil(Etudiant etudiant) {
+        Intent intent = new Intent(MainActivity.this, AccueilActivity.class);
+        intent.putExtra("etudiant", etudiant);
+        startActivity(intent);
     }
 }

@@ -3,7 +3,6 @@ package com.example.appli_fsi.model.DAO;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.example.appli_fsi.model.BO.BilanDeux;
@@ -19,19 +18,21 @@ public class BilanDeuxDAO {
         dbHelper = new MySQLiteHelper(context);
     }
 
-    public void open() throws SQLException {
+    public void open() {
         database = dbHelper.getWritableDatabase();
     }
 
     public void close() {
-        dbHelper.close();
+        database.close();
     }
 
-    public BilanDeux insertBilan(BilanDeux bilanDeux){
+    public BilanDeux insertBilan(BilanDeux bilanDeux) {
         ContentValues values = new ContentValues();
-        values.put("noteOralDeux", bilanDeux.getNoteOralDeux());
-        values.put("noteDossierDeux", bilanDeux.getNoteDossierDeux());
-
+        values.put(MySQLiteHelper.COLUMN_NOTE_ORAL_DEUX, bilanDeux.getNoteOralDeux());
+        values.put(MySQLiteHelper.COLUMN_NOTE_DOSSIER_DEUX, bilanDeux.getNoteDossierDeux());
+        values.put(MySQLiteHelper.COLUMN_DATE_BILAN_DEUX, bilanDeux.getDateBilanDeux().getTime());
+        values.put(MySQLiteHelper.COLUMN_RQ_BILAN_DEUX, bilanDeux.getRqBilanDeux());
+        values.put(MySQLiteHelper.COLUMN_SUJET_MEMOIRE, bilanDeux.getSujetMemoire());
 
         long id = database.insert(MySQLiteHelper.TABLE_BILAN_DEUX, null, values);
         bilanDeux.setIdBilanDeux((int) id);
@@ -39,23 +40,22 @@ public class BilanDeuxDAO {
         return bilanDeux;
     }
 
-    public ArrayList<BilanDeux> getAllBilanDeux(){
+    public ArrayList<BilanDeux> getAllBilanDeux() {
         ArrayList<BilanDeux> listBilans = new ArrayList<>();
 
-        Cursor cursor = database.query(true, MySQLiteHelper.TABLE_BILAN_DEUX,
-                new String[]{"idBilanDeux", "noteOralDeux", "noteDossierDeux", "dateBilanDeux", "rqBilanDeux", "sujetMemoire"},
-                null, null, null, null, null, null);
+        String[] colonnes = {
+                MySQLiteHelper.COLUMN_ID_BILAN_DEUX,
+                MySQLiteHelper.COLUMN_NOTE_ORAL_DEUX,
+                MySQLiteHelper.COLUMN_NOTE_DOSSIER_DEUX,
+                MySQLiteHelper.COLUMN_DATE_BILAN_DEUX,
+                MySQLiteHelper.COLUMN_RQ_BILAN_DEUX,
+                MySQLiteHelper.COLUMN_SUJET_MEMOIRE
+        };
 
-        while (cursor.moveToNext()){
-            int idBilanDeux = cursor.getInt(cursor.getColumnIndex("idBilanDeux"));
-            float noteOralDeux = cursor.getFloat(cursor.getColumnIndex("noteOralDeux"));
-            float noteDossierDeux = cursor.getFloat(cursor.getColumnIndex("noteDossierDeux"));
-            long dateMillis = cursor.getLong(cursor.getColumnIndex("dateBilanDeux"));
-            Date dateBilanDeux = new Date(dateMillis);
-            String rqBilanDeux = cursor.getString(cursor.getColumnIndex("rqBilanDeux"));
-            String sujetMemoire = cursor.getString(cursor.getColumnIndex("sujetMemoire"));
+        Cursor cursor = database.query(MySQLiteHelper.TABLE_BILAN_DEUX, colonnes, null, null, null, null, null);
 
-            BilanDeux bilanDeux = new BilanDeux(idBilanDeux, noteOralDeux, noteDossierDeux, dateBilanDeux, rqBilanDeux, sujetMemoire);
+        while (cursor.moveToNext()) {
+            BilanDeux bilanDeux = getBilanDeuxFromCursor(cursor);
             listBilans.add(bilanDeux);
         }
 
@@ -63,32 +63,47 @@ public class BilanDeuxDAO {
         return listBilans;
     }
 
-
-    public BilanDeux getBilanById(int id){
+    public BilanDeux getBilanById(int id) {
         BilanDeux bilanDeux = null;
 
-        Cursor cursor = database.query(true, MySQLiteHelper.TABLE_BILAN_DEUX,
-                new String[]{"idBilanDeux", "noteOralDeux", "noteDossierDeux", "dateBilanDeux", "rqBilanDeux", "sujetMemoire"},
-                "idBilanDeux = " + id, null, null, null, null, null);
+        String[] colonnes = {
+                MySQLiteHelper.COLUMN_ID_BILAN_DEUX,
+                MySQLiteHelper.COLUMN_NOTE_ORAL_DEUX,
+                MySQLiteHelper.COLUMN_NOTE_DOSSIER_DEUX,
+                MySQLiteHelper.COLUMN_DATE_BILAN_DEUX,
+                MySQLiteHelper.COLUMN_RQ_BILAN_DEUX,
+                MySQLiteHelper.COLUMN_SUJET_MEMOIRE
+        };
 
-        while (cursor.moveToNext()){
-            float noteOralDeux = cursor.getFloat(cursor.getColumnIndex("noteOralDeux"));
-            float noteDossierDeux = cursor.getFloat(cursor.getColumnIndex("noteDossierDeux"));
-            long dateMillis = cursor.getLong(cursor.getColumnIndex("dateBilanDeux"));
-            Date dateBilanDeux = new Date(dateMillis);
-            String rqBilanDeux = cursor.getString(cursor.getColumnIndex("rqBilanDeux"));
-            String sujetMemoire = cursor.getString(cursor.getColumnIndex("sujetMemoire"));
+        String selection = MySQLiteHelper.COLUMN_ID_BILAN_DEUX + " = ?";
+        String[] selectionArgs = {String.valueOf(id)};
 
-            bilanDeux = new BilanDeux(id, noteOralDeux, noteDossierDeux, dateBilanDeux, rqBilanDeux, sujetMemoire);
+        Cursor cursor = database.query(MySQLiteHelper.TABLE_BILAN_DEUX, colonnes, selection, selectionArgs, null, null, null);
+
+        if (cursor.moveToNext()) {
+            bilanDeux = getBilanDeuxFromCursor(cursor);
         }
 
         cursor.close();
         return bilanDeux;
     }
 
-    public void deleteBilan(BilanDeux bilanDeux){
+    public void deleteBilan(BilanDeux bilanDeux) {
         int id = bilanDeux.getIdBilanDeux();
-        database.delete(MySQLiteHelper.TABLE_BILAN_DEUX, "idBilanDeux = " + id, null);
+        String selection = MySQLiteHelper.COLUMN_ID_BILAN_DEUX + " = ?";
+        String[] selectionArgs = {String.valueOf(id)};
+        database.delete(MySQLiteHelper.TABLE_BILAN_DEUX, selection, selectionArgs);
+    }
+
+    private BilanDeux getBilanDeuxFromCursor(Cursor cursor) {
+        int idBilanDeux = cursor.getInt(cursor.getColumnIndex(MySQLiteHelper.COLUMN_ID_BILAN_DEUX));
+        float noteOralDeux = cursor.getFloat(cursor.getColumnIndex(MySQLiteHelper.COLUMN_NOTE_ORAL_DEUX));
+        float noteDossierDeux = cursor.getFloat(cursor.getColumnIndex(MySQLiteHelper.COLUMN_NOTE_DOSSIER_DEUX));
+        long dateMillis = cursor.getLong(cursor.getColumnIndex(MySQLiteHelper.COLUMN_DATE_BILAN_DEUX));
+        Date dateBilanDeux = new Date(dateMillis);
+        String rqBilanDeux = cursor.getString(cursor.getColumnIndex(MySQLiteHelper.COLUMN_RQ_BILAN_DEUX));
+        String sujetMemoire = cursor.getString(cursor.getColumnIndex(MySQLiteHelper.COLUMN_SUJET_MEMOIRE));
+
+        return new BilanDeux(idBilanDeux, noteOralDeux, noteDossierDeux, dateBilanDeux, rqBilanDeux, sujetMemoire);
     }
 }
-
